@@ -1,4 +1,4 @@
-/// <reference types="cytoscape" />
+/// <reference types="cytoscape" preserve="true" />
 type IHAlign = "left" | "center" | "right";
 type IVAlign = "top" | "center" | "bottom";
 declare var module: {

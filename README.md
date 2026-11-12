@@ -148,12 +148,16 @@ Behaviour differences to be aware of:
   unrelated node events.
 
 ## How to build and develop:
-1) Run `npm start`
+Requires Node.js 18 or newer and Chrome (tests run in headless Chrome).
+
+1) `npm install`
+1) Run `npm start` (TypeScript watch mode)
 1) Create change in src/cytoscape-node-html-label.ts
-1) When finished => `npm run test`
-1) Prepare js and min files: `npm run build`
+1) `npm run lint`
+1) Prepare js, min and d.ts files: `npm run build`
+1) When finished => `npm test` (or `npm run test-firefox`)
 1) `git commit`
 
 Then, for version update and publish:
-1) Create new npm version: `gulp patch`, `gulp feature` or `gulp release`
-1) `npm publish`
+1) Create new npm version (commits and tags): `npm version patch`, `npm version minor` or `npm version major`
+1) `npm publish` (runs lint and build first)

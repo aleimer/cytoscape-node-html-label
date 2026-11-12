@@ -32,6 +32,17 @@ Performance changes on top of upstream 1.2.2. No API or option changes.
 - Label layer styles set as `zIndex` / `pointerEvents` instead of the dashed
   property names; same effect.
 
+### Tooling
+
+- Removed gulp and its plugins; `npm run build` is now `tsc` + `terser`,
+  version bumps use `npm version`.
+- Karma 6 / karma-jasmine 5 (specs run in file order), TypeScript 5.5,
+  @typescript-eslint 7.18. Cytoscape types now come from the `cytoscape`
+  package (dev dependency) instead of `@types/cytoscape`.
+- Tests load Cytoscape from `node_modules` (current 3.x) instead of
+  `libs/cytoscape.min.js`; the demo page still uses `libs/`.
+- Lockfile regenerated; CI runs on Node 22 with current actions.
+
 ### Behaviour notes
 
 - Label updates now run on the next animation frame rather than the next

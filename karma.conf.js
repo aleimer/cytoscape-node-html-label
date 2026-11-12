@@ -9,10 +9,17 @@ module.exports = function (config) {
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
     frameworks: ['jasmine'],
 
+    // specs depend on running in file order (jasmine >= 3 randomises by default)
+    client: {
+      jasmine: {
+        random: false
+      }
+    },
+
 
     // list of files / patterns to load in the browser
     files: [
-      {pattern: 'libs/cytoscape.min.js', watched: false},
+      {pattern: 'node_modules/cytoscape/dist/cytoscape.min.js', watched: false},
       {pattern: 'dist/cytoscape-node-html-label.js', watched: false},
       {pattern: 'test/**/*.css'},
       'test/**/*.js'

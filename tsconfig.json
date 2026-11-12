@@ -10,10 +10,10 @@
       "dom"
     ],
     "noImplicitAny": true,
-    "suppressImplicitAnyIndexErrors": true,
     "typeRoots": [
       "./node_modules/@types"
     ],
+    "types": [],
     "removeComments": true,
     "outDir": "dist",
     "skipLibCheck": true
