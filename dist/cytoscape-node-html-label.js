@@ -1,20 +1,19 @@
 (function () {
     "use strict";
-    var $$find = function (arr, predicate) {
+    function $$find(arr, predicate) {
         if (typeof predicate !== "function") {
             throw new TypeError("predicate must be a function");
         }
         var length = arr.length >>> 0;
         var thisArg = arguments[1];
-        var value;
         for (var i = 0; i < length; i++) {
-            value = arr[i];
+            var value = arr[i];
             if (predicate.call(thisArg, value, i, arr)) {
                 return value;
             }
         }
         return undefined;
-    };
+    }
     var LabelElement = (function () {
         function LabelElement(_a, params) {
             var node = _a.node, _b = _a.position, position = _b === void 0 ? null : _b, _c = _a.data, data = _c === void 0 ? null : _c;
@@ -81,8 +80,8 @@
             var y = position.y + this._align[1] * position.h;
             if (!prev || prev[0] !== x || prev[1] !== y) {
                 this._position = [x, y];
-                var valRel = "translate(" + this._align[2] + "%," + this._align[3] + "%) ";
-                var valAbs = "translate(" + x.toFixed(2) + "px," + y.toFixed(2) + "px) ";
+                var valRel = "translate(".concat(this._align[2], "%,").concat(this._align[3], "%) ");
+                var valAbs = "translate(".concat(x.toFixed(2), "px,").concat(y.toFixed(2), "px) ");
                 var val = valRel + valAbs;
                 var stl = this._node.style;
                 stl.webkitTransform = val;
@@ -129,7 +128,7 @@
         };
         LabelContainer.prototype.updatePanZoom = function (_a) {
             var pan = _a.pan, zoom = _a.zoom;
-            var val = "translate(" + pan.x + "px," + pan.y + "px) scale(" + zoom + ")";
+            var val = "translate(".concat(pan.x, "px,").concat(pan.y, "px) scale(").concat(zoom, ")");
             var stl = this._node.style;
             var origin = "top left";
             stl.webkitTransform = val;
@@ -200,16 +199,15 @@
                 _cyCanvas.parentNode.removeChild(cur);
             }
             var stl = _titlesContainer.style;
-            stl.position = 'absolute';
-            stl['z-index'] = 10;
-            stl.width = '500px';
-            stl.margin = '0px';
-            stl.padding = '0px';
-            stl.border = '0px';
-            stl.outline = '0px';
-            stl.outline = '0px';
+            stl.position = "absolute";
+            stl.zIndex = "10";
+            stl.width = "500px";
+            stl.margin = "0px";
+            stl.padding = "0px";
+            stl.border = "0px";
+            stl.outline = "0px";
             if (options && options.enablePointerEvents !== true) {
-                stl['pointer-events'] = 'none';
+                stl.pointerEvents = "none";
             }
             _cyCanvas.parentNode.appendChild(_titlesContainer);
             return new LabelContainer(_titlesContainer);
@@ -275,14 +273,14 @@
             };
         }
     }
-    var register = function (cy) {
+    function register(cy) {
         if (!cy) {
             return;
         }
         cy("core", "nodeHtmlLabel", function (optArr, options) {
             return cyNodeHtmlLabel(this, optArr, options);
         });
-    };
+    }
     if (typeof module !== "undefined" && module.exports) {
         module.exports = function (cy) {
             register(cy);

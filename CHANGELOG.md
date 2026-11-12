@@ -18,6 +18,20 @@ Performance changes on top of upstream 1.2.2. No API or option changes.
   longer trigger work. `removeCyHandler` drops a pending move for the removed
   node.
 
+### Code style
+
+- Stricter ESLint config: Allman braces, 4-space indent, double quotes,
+  128-column limit, explicit types on every variable, parameter and function
+  return, `no-explicit-any`, `eqeqeq`, member ordering.
+- Tooling raised for these rules: ESLint 8.57, @typescript-eslint 6.21,
+  TypeScript 4.9.
+- `any` replaced with `@types/cytoscape` types. In the generated `.d.ts`,
+  `tpl` now receives `cytoscape.NodeDataDefinition` (still allows any data
+  field) and the file references `@types/cytoscape`. The global
+  `declare var cytoscape: any` is gone.
+- Label layer styles set as `zIndex` / `pointerEvents` instead of the dashed
+  property names; same effect.
+
 ### Behaviour notes
 
 - Label updates now run on the next animation frame rather than the next
