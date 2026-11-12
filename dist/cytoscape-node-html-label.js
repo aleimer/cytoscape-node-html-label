@@ -46,11 +46,17 @@
             this.tpl = tpl;
         };
         LabelElement.prototype.updateData = function (data) {
+            // PERF: skip the DOM rebuild when the template output did not change
+            var html = this.tpl(data);
+            if (html === this._html) {
+                return;
+            }
+            this._html = html;
             while (this._node.firstChild) {
                 this._node.removeChild(this._node.firstChild);
             }
             var children = new DOMParser()
-                .parseFromString(this.tpl(data), "text/html")
+                .parseFromString(html, "text/html")
                 .body.children;
             for (var i = 0; i < children.length; ++i) {
                 var el = children[i];
@@ -133,6 +139,11 @@
             stl.webkitTransformOrigin = origin;
             stl.msTransformOrigin = origin;
             stl.transformOrigin = origin;
+            // PERF: own compositor layer while the viewport moves (pan/zoom done by the GPU,
+            // no repaint of every label per frame); dropped when idle so text re-rasters sharp.
+            stl.willChange = "transform";
+            clearTimeout(this._idle);
+            this._idle = setTimeout(function () { stl.willChange = ""; }, 150);
         };
         return LabelContainer;
     }());
@@ -146,10 +157,41 @@
         _cy.on("add", addCyHandler);
         _cy.on("layoutstop", layoutstopHandler);
         _cy.on("remove", removeCyHandler);
-        _cy.on("data", updateDataOrStyleCyHandler);
-        _cy.on("style", updateDataOrStyleCyHandler);
+        // PERF: node-only bindings (edge events only did no-op work before)
+        _cy.on("data", "node", updateDataOrStyleCyHandler);
+        _cy.on("style", "node", updateDataOrStyleCyHandler);
         _cy.on("pan zoom", wrapCyHandler);
-        _cy.on("position bounds", moveCyHandler);
+        _cy.on("position bounds", "node", moveCyHandler);
+        // PERF: per-node updates collected and applied once per animation frame
+        var _moved = {}, _changed = {}, _frame = 0;
+        function schedule() {
+            if (!_frame) {
+                _frame = requestAnimationFrame(flush);
+            }
+        }
+        function flush() {
+            _frame = 0;
+            var moved = _moved, changed = _changed;
+            _moved = {};
+            _changed = {};
+            Object.keys(changed).forEach(function (id) {
+                var target = changed[id];
+                delete moved[id]; // full update below includes the position
+                var param = $$find(_params.slice().reverse(), function (x) { return target.is(x.query); });
+                if (param && !target.removed()) {
+                    _lc.addOrUpdateElem(id, param, {
+                        position: getNodePosition(target),
+                        data: target.data()
+                    });
+                }
+                else {
+                    _lc.removeElemById(id);
+                }
+            });
+            Object.keys(moved).forEach(function (id) {
+                _lc.updateElemPosition(id, getNodePosition(moved[id]));
+            });
+        }
         return _cy;
         function createLabelContainer() {
             var _cyContainer = _cy.container();
@@ -208,25 +250,16 @@
             });
         }
         function removeCyHandler(ev) {
+            delete _moved[ev.target.id()];
             _lc.removeElemById(ev.target.id());
         }
         function moveCyHandler(ev) {
-            _lc.updateElemPosition(ev.target.id(), getNodePosition(ev.target));
+            _moved[ev.target.id()] = ev.target;
+            schedule();
         }
         function updateDataOrStyleCyHandler(ev) {
-            setTimeout(function () {
-                var target = ev.target;
-                var param = $$find(_params.slice().reverse(), function (x) { return target.is(x.query); });
-                if (param && !target.removed()) {
-                    _lc.addOrUpdateElem(target.id(), param, {
-                        position: getNodePosition(target),
-                        data: target.data()
-                    });
-                }
-                else {
-                    _lc.removeElemById(target.id());
-                }
-            }, 0);
+            _changed[ev.target.id()] = ev.target;
+            schedule();
         }
         function wrapCyHandler(_a) {
             var cy = _a.cy;
