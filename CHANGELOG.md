@@ -41,7 +41,7 @@ Performance changes on top of upstream 1.2.2. No API or option changes.
   package (dev dependency) instead of `@types/cytoscape`.
 - Tests load Cytoscape from `node_modules` (current 3.x) instead of
   `libs/cytoscape.min.js`; the demo page still uses `libs/`.
-- Lockfile regenerated; CI runs on Node 22 with current actions.
+- Lockfile regenerated. GitHub Actions CI workflow removed.
 
 ### Behaviour notes
 
