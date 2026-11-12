@@ -67,6 +67,7 @@ interface CytoscapeContainerParams {
     private _position: number[];
     private _node: HTMLElement;
     private _align: [number, number, number, number];
+    private _html: string;
 
     constructor({
                   node,
@@ -117,12 +118,19 @@ interface CytoscapeContainerParams {
     }
 
     updateData(data: any) {
+      // PERF: skip the DOM rebuild when the template output did not change
+      const html = this.tpl(data);
+      if (html === this._html) {
+        return;
+      }
+      this._html = html;
+
       while (this._node.firstChild) {
         this._node.removeChild(this._node.firstChild);
       }
 
       const children = new DOMParser()
-          .parseFromString(this.tpl(data), "text/html")
+          .parseFromString(html, "text/html")
           .body.children;
 
       for (let i = 0; i < children.length; ++i) {
@@ -174,6 +182,7 @@ interface CytoscapeContainerParams {
   class LabelContainer {
     private _elements: HashTableElements;
     private _node: HTMLElement;
+    private _idle: any;
 
     constructor(node: HTMLElement) {
       this._node = node;
@@ -223,6 +232,12 @@ interface CytoscapeContainerParams {
       stl.webkitTransformOrigin = origin;
       stl.msTransformOrigin = origin;
       stl.transformOrigin = origin;
+
+      // PERF: own compositor layer while the viewport moves (pan/zoom done by the GPU,
+      // no repaint of every label per frame); dropped when idle so text re-rasters sharp.
+      stl.willChange = "transform";
+      clearTimeout(this._idle);
+      this._idle = setTimeout(() => { stl.willChange = ""; }, 150);
     }
   }
 
@@ -237,10 +252,48 @@ interface CytoscapeContainerParams {
     _cy.on("add", addCyHandler);
     _cy.on("layoutstop", layoutstopHandler);
     _cy.on("remove", removeCyHandler);
-    _cy.on("data", updateDataOrStyleCyHandler);
-    _cy.on("style", updateDataOrStyleCyHandler);
+    // PERF: node-only bindings (edge events only did no-op work before)
+    _cy.on("data", "node", updateDataOrStyleCyHandler);
+    _cy.on("style", "node", updateDataOrStyleCyHandler);
     _cy.on("pan zoom", wrapCyHandler);
-    _cy.on("position bounds", moveCyHandler); // "bounds" - not documented event
+    _cy.on("position bounds", "node", moveCyHandler); // "bounds" - not documented event
+
+    // PERF: per-node updates collected and applied once per animation frame
+    let _moved: { [id: string]: any } = {};
+    let _changed: { [id: string]: any } = {};
+    let _frame = 0;
+
+    function schedule() {
+      if (!_frame) {
+        _frame = requestAnimationFrame(flush);
+      }
+    }
+
+    function flush() {
+      _frame = 0;
+      const moved = _moved;
+      const changed = _changed;
+      _moved = {};
+      _changed = {};
+
+      Object.keys(changed).forEach(id => {
+        const target = changed[id];
+        delete moved[id]; // full update below includes the position
+        const param = $$find(_params.slice().reverse(), x => target.is(x.query));
+        if (param && !target.removed()) {
+          _lc.addOrUpdateElem(id, param, {
+            position: getNodePosition(target),
+            data: target.data()
+          });
+        } else {
+          _lc.removeElemById(id);
+        }
+      });
+
+      Object.keys(moved).forEach(id => {
+        _lc.updateElemPosition(id, getNodePosition(moved[id]));
+      });
+    }
 
     return _cy;
 
@@ -308,27 +361,18 @@ interface CytoscapeContainerParams {
     }
 
     function removeCyHandler(ev: ICyEventObject) {
+      delete _moved[ev.target.id()];
       _lc.removeElemById(ev.target.id());
     }
 
     function moveCyHandler(ev: ICyEventObject) {
-      // console.log('moveCyHandler');
-      _lc.updateElemPosition(ev.target.id(), getNodePosition(ev.target));
+      _moved[ev.target.id()] = ev.target;
+      schedule();
     }
 
     function updateDataOrStyleCyHandler(ev: ICyEventObject) {
-      setTimeout(() => {
-        const target = ev.target;
-        const param = $$find(_params.slice().reverse(), x => target.is(x.query));
-        if (param && !target.removed()) {
-          _lc.addOrUpdateElem(target.id(), param, {
-            position: getNodePosition(target),
-            data: target.data()
-          });
-        } else {
-          _lc.removeElemById(target.id());
-        }
-      }, 0);
+      _changed[ev.target.id()] = ev.target;
+      schedule();
     }
 
     function wrapCyHandler({cy}: ICyEventObject) {

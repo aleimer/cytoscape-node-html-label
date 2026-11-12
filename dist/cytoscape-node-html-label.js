@@ -46,7 +46,6 @@
             this.tpl = tpl;
         };
         LabelElement.prototype.updateData = function (data) {
-            // PERF: skip the DOM rebuild when the template output did not change
             var html = this.tpl(data);
             if (html === this._html) {
                 return;
@@ -139,8 +138,6 @@
             stl.webkitTransformOrigin = origin;
             stl.msTransformOrigin = origin;
             stl.transformOrigin = origin;
-            // PERF: own compositor layer while the viewport moves (pan/zoom done by the GPU,
-            // no repaint of every label per frame); dropped when idle so text re-rasters sharp.
             stl.willChange = "transform";
             clearTimeout(this._idle);
             this._idle = setTimeout(function () { stl.willChange = ""; }, 150);
@@ -157,13 +154,13 @@
         _cy.on("add", addCyHandler);
         _cy.on("layoutstop", layoutstopHandler);
         _cy.on("remove", removeCyHandler);
-        // PERF: node-only bindings (edge events only did no-op work before)
         _cy.on("data", "node", updateDataOrStyleCyHandler);
         _cy.on("style", "node", updateDataOrStyleCyHandler);
         _cy.on("pan zoom", wrapCyHandler);
         _cy.on("position bounds", "node", moveCyHandler);
-        // PERF: per-node updates collected and applied once per animation frame
-        var _moved = {}, _changed = {}, _frame = 0;
+        var _moved = {};
+        var _changed = {};
+        var _frame = 0;
         function schedule() {
             if (!_frame) {
                 _frame = requestAnimationFrame(flush);
@@ -171,12 +168,13 @@
         }
         function flush() {
             _frame = 0;
-            var moved = _moved, changed = _changed;
+            var moved = _moved;
+            var changed = _changed;
             _moved = {};
             _changed = {};
             Object.keys(changed).forEach(function (id) {
                 var target = changed[id];
-                delete moved[id]; // full update below includes the position
+                delete moved[id];
                 var param = $$find(_params.slice().reverse(), function (x) { return target.is(x.query); });
                 if (param && !target.removed()) {
                     _lc.addOrUpdateElem(id, param, {

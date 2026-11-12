@@ -123,6 +123,30 @@ cyInstance.nodeHtmlLabel([{
 Demo here: https://kaluginserg.github.io/cytoscape-node-html-label/
 
 
+## Performance notes
+
+This fork changes how labels are updated so large graphs pan, zoom and restyle
+faster. The API and options are unchanged. See [CHANGELOG.md](CHANGELOG.md).
+
+- **Pan and zoom:** the label layer gets `will-change: transform` while the
+  viewport moves, so the browser moves it on the GPU instead of repainting every
+  label each frame. The hint is removed 150 ms after the last pan/zoom so text
+  is re-rastered sharp; labels can look slightly soft while zooming.
+- **Batched updates:** `data`, `style`, `position` and `bounds` events are
+  collected and applied once per `requestAnimationFrame`, one update per node
+  per frame. Edge events no longer trigger any label work.
+- **No needless rebuilds:** a label's DOM is rebuilt only when its `tpl` output
+  changes, so `addClass`, selection and hover no longer re-parse every label.
+
+Behaviour differences to be aware of:
+
+- Label updates land on the next animation frame instead of the next
+  `setTimeout` tick. In a background tab, browsers pause animation frames, so
+  labels catch up when the tab becomes visible.
+- If `tpl` returns the same HTML as before, the existing label element is
+  kept. Changes you made to that element's DOM by hand are no longer reset by
+  unrelated node events.
+
 ## How to build and develop:
 1) Run `npm start`
 1) Create change in src/cytoscape-node-html-label.ts
